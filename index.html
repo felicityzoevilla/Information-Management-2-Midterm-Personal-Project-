@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEU Library Management System</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body style="background-image: url('https://www.manilatimes.net/manilatimes/uploads/images/2021/10/07/19096.jpg'); background-attachment: fixed; background-size: cover; background-position: center;">
+
+    <div id="auth-container" class="container">
+        <div class="toggle-btns" style="margin-bottom: 20px; display: flex; gap: 10px;">
+            <button onclick="setRole('admin')" id="btn-admin" style="background: var(--primary);">Admin Portal</button>
+            <button onclick="setRole('student')" id="btn-student" style="background: #555;">Student Portal</button>
+        </div>
+
+        <div id="login-box" class="form-box">
+            <h2 id="login-title">NEU Library <br><span>Admin Login</span></h2>
+            <form id="login-form">
+                <input type="text" id="login-user" placeholder="Username" required>
+                <input type="password" id="login-pass" placeholder="Password" required>
+                <button type="submit" id="login-submit-btn">Login as Admin</button>
+            </form>
+            <p id="signup-link">New Admin? <a href="#" onclick="showBox('signup')">Create Admin Account</a></p>
+        </div>
+
+        <div id="admin-signup-box" class="form-box hidden">
+            <h2>NEU Library <br><span>Admin Registration</span></h2>
+            <form id="admin-signup-form">
+                <input type="text" id="admin-signup-user" placeholder="Choose Admin Username" required>
+                <input type="password" id="admin-signup-pass" placeholder="Create Password" required>
+                <input type="text" id="admin-key" placeholder="System Master Key" required>
+                <button type="submit">Register Admin</button>
+            </form>
+            <p>Already an Admin? <a href="#" onclick="showBox('login')">Login here</a></p>
+        </div>
+
+        <div id="student-signup-box" class="form-box hidden">
+            <h2>NEU Library <br><span>Student Registration</span></h2>
+            <form id="student-signup-form">
+                <input type="text" id="student-signup-user" placeholder="Choose Student Username" required>
+                <input type="email" id="student-signup-email" placeholder="Student Email" required>
+                <input type="password" id="student-signup-pass" placeholder="Create Password" required>
+                <input type="text" id="student-id" placeholder="Student ID" required>
+                <button type="submit">Register as Student</button>
+            </form>
+            <p>Already a Student? <a href="#" onclick="showBox('student-login')">Login here</a></p>
+        </div>
+
+        <div id="student-login-box" class="form-box hidden">
+            <h2>NEU Library <br><span>Student Login</span></h2>
+            <form id="student-login-form">
+                <input type="text" id="student-login-user" placeholder="Username" required>
+                <input type="password" id="student-login-pass" placeholder="Password" required>
+                <button type="submit" id="student-login-submit-btn">Login as Student</button>
+            </form>
+            <p id="student-signup-link">New Student? <a href="#" onclick="showBox('student-signup')">Create Student Account</a></p>
+        </div>
+    </div>
+
+    <!-- STUDENT DASHBOARD -->
+    <div id="student-dashboard" class="hidden dashboard-wrapper">
+        <nav style="background: #2c3e50;">
+            <h1>NEU Student Library</h1>
+            <button onclick="logout()" class="logout-btn">Logout</button>
+        </nav>
+        <main>
+            <div class="card" style="margin-bottom: 20px; background: rgba(52, 73, 94, 0.95); padding: 20px; border-radius: 8px; color: white;">
+                <h3>Welcome, <span id="student-name-display">Student</span>!</h3>
+                <p>Browse and borrow books from our collection below.</p>
+            </div>
+
+            <!-- Search Bar -->
+            <div style="margin-bottom: 20px;">
+                <input type="text" id="student-search" placeholder="🔍 Search books by title or author..." 
+                    style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; font-size: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            </div>
+
+            <!-- Books Shelf Display -->
+            <section class="books-shelf">
+                <h3 style="margin-bottom: 20px; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">📖 Available Books Collection</h3>
+                <div id="student-books-grid" class="books-grid">
+                    <!-- Books will be loaded here -->
+                </div>
+            </section>
+
+            <!-- Borrowed Books Section -->
+            <section style="margin-top: 40px;">
+                <h3 style="margin-bottom: 20px; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">📋 My Borrowed Books</h3>
+                <table id="borrowed-books-table" style="width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.95);">
+                    <thead>
+                        <tr style="background: #34495e; color: white;">
+                            <th style="padding: 12px; text-align: left;">Title</th>
+                            <th style="padding: 12px; text-align: left;">Author</th>
+                            <th style="padding: 12px; text-align: left;">Borrowed Date</th>
+                            <th style="padding: 12px; text-align: left;">Due Date</th>
+                            <th style="padding: 12px; text-align: left;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="borrowed-book-list"></tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+
+    <!-- ADMIN DASHBOARD -->
+    <div id="dashboard" class="hidden dashboard-wrapper">
+        <nav>
+            <h1>NEU Admin Panel</h1>
+            <button onclick="logout()" class="logout-btn">Logout</button>
+        </nav>
+        <main>
+            <!-- Stats Section -->
+            <section class="stats">
+                <div class="card">
+                    <i class="fas fa-book" style="font-size: 24px; margin-right: 10px; color: #3498db;"></i>
+                    Books: <span id="book-count">0</span>
+                </div>
+                <div class="card">
+                    <i class="fas fa-handshake" style="font-size: 24px; margin-right: 10px; color: #e74c3c;"></i>
+                    Active Loans: <span id="loan-count">0</span>
+                </div>
+                <div class="card">
+                    <i class="fas fa-users" style="font-size: 24px; margin-right: 10px; color: #2ecc71;"></i>
+                    Total Students: <span id="student-count">0</span>
+                </div>
+            </section>
+
+            <!-- Add Book Section -->
+            <section style="margin-top: 30px;">
+                <div class="add-book-section" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.95) 0%, rgba(118, 75, 162, 0.95) 100%); padding: 30px; border-radius: 12px; margin-bottom: 30px;">
+                    <h3 style="color: white; margin-bottom: 20px;">➕ Add New Book to Inventory</h3>
+                    <form id="add-book-form" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <input type="text" id="new-book-title" placeholder="Book Title" required 
+                            style="padding: 12px; border-radius: 6px; border: none; font-size: 14px;">
+                        <input type="text" id="new-book-author" placeholder="Author Name" required
+                            style="padding: 12px; border-radius: 6px; border: none; font-size: 14px;">
+                        <input type="number" id="new-book-isbn" placeholder="ISBN" 
+                            style="padding: 12px; border-radius: 6px; border: none; font-size: 14px;">
+                        <input type="text" id="new-book-category" placeholder="Category" required
+                            style="padding: 12px; border-radius: 6px; border: none; font-size: 14px;">
+                        <input type="number" id="new-book-quantity" placeholder="Quantity" value="1" required
+                            style="padding: 12px; border-radius: 6px; border: none; font-size: 14px;">
+                        <select id="new-book-status" style="padding: 12px; border-radius: 6px; border: none; font-size: 14px;">
+                            <option value="Available">Available</option>
+                            <option value="Loaned">Loaned</option>
+                            <option value="Maintenance">Not Available</option>
+                        </select>
+                        <button type="submit" onclick="addNewBook(event)" style="padding: 12px 30px; background: white; color: #667eea; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; grid-column: span 1;">
+                            Add Book
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Books Inventory Table -->
+            <section class="inventory">
+                <h3 style="margin-bottom: 20px; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">Book Inventory</h3>
+                <div style="overflow-x: auto; background: rgba(255,255,255,0.95); border-radius: 8px;">
+                    <table id="book-table">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Author</th>
+                                <th>ISBN</th>
+                                <th>Category</th>
+                                <th>Quantity</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="book-list"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
