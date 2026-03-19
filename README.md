@@ -4,6 +4,8 @@ A digital visitor login system for the **New Era University Library**, designed 
 
 > 🔗 https://villa-midterm-project-im-neulibrarylog.vercel.app/
 
+Optional: jcesperanza@neu.edu.ph Password: adminjcesperanza
+
 **Features**
 - ✅ **Visitor Login Form** — Captures visitor name, ID number (e.g. 12-3456-789), purpose of visit, and time of entry
 - ✅ **Date & Time Stamp** — Automatically logs the visit timestamp
