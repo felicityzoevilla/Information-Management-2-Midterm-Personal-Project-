@@ -201,26 +201,31 @@ async function handleLogin() {
     }
 }
 
+// ── Google Login ───────────────────────────────────────────────
 async function handleGoogleLogin() {
     const btn = document.getElementById('google-btn');
     btn.disabled = true;
     btn.innerHTML = `<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" height="18"> Redirecting…`;
     showLoading('Redirecting to Google...');
- 
+
+    // ✅ FIX 1: Save the selected mode (admin/regular) before Google redirects away
+    localStorage.setItem('loginMode', selectedMode);
+
     const { error } = await db.auth.signInWithOAuth({
         provider: 'google',
         options: {
-            redirectTo: window.location.href   // returns to the same page after Google auth
+            redirectTo: window.location.href
         }
     });
- 
+
     hideLoading();
     btn.disabled = false;
     btn.innerHTML = `<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" height="18"> Sign in with Google`;
- 
+
     if (error) showToast('Google sign-in failed: ' + error.message, 'error');
 }
 
+// ── Enter Views ────────────────────────────────────────────────
 function enterRegular(email, profile) {
     document.getElementById('login-container').classList.add('hidden');
     document.getElementById('app-content').style.display = 'block';
@@ -390,25 +395,44 @@ function subscribeRealtime() {
         .subscribe();
 }
 
+// ── Google Redirect Handler ────────────────────────────────────
 (async () => {
     const { data: { session } } = await db.auth.getSession();
-    if (!session) return;   // not a Google redirect, normal flow
- 
+    if (!session) return;
+
+    // ✅ FIX 2: Clean the ugly #access_token=... from the URL bar
+    window.history.replaceState(null, '', window.location.pathname);
+
     const email = session.user.email;
- 
-    // Check if admin first
-    const { data: adminRow } = await db.from('admin_users').select('email').eq('email', email).single();
-    if (adminRow) {
+
+    // ✅ FIX 3: Read the saved mode from before the Google redirect
+    const savedMode = localStorage.getItem('loginMode') || 'regular';
+    localStorage.removeItem('loginMode'); // clean up after reading
+
+    if (savedMode === 'admin') {
+        // Check if this Google account exists in admin_users table
+        const { data: adminRow } = await db.from('admin_users')
+            .select('email')
+            .eq('email', email)
+            .single();
+
+        if (!adminRow) {
+            showToast('You do not have admin privileges.', 'error');
+            await db.auth.signOut();
+            return;
+        }
         enterAdmin();
         return;
     }
- 
-    // Otherwise treat as regular user — upsert profile from Google metadata
+
+    // Regular user flow — fetch or create profile
     const meta = session.user.user_metadata;
-    const { data: existingProfile } = await db.from('user_profiles').select('*').eq('id', session.user.id).single();
- 
+    const { data: existingProfile } = await db.from('user_profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+
     if (!existingProfile) {
-        // First-time Google user: insert a minimal profile (they can complete it later)
         await db.from('user_profiles').insert([{
             id:        session.user.id,
             full_name: meta.full_name || meta.name || email,
@@ -418,7 +442,7 @@ function subscribeRealtime() {
             course:    ''
         }]);
     }
- 
+
     const profile = existingProfile || { full_name: meta.full_name || meta.name || email };
     enterRegular(email, profile);
 })();
