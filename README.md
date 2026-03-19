@@ -11,8 +11,6 @@ A digital visitor login system for the **New Era University Library**, designed 
 - ✅ **Clean UI** — Simple and intuitive interface suited for library use
 - ✅ **Responsive Design** — Works on desktop and mobile browsers
 
-For admin acc: jcesperanza@neu.edu.ph 
-Password: adminjcesperanza
 
 -------------------------
 © 2026 NEU Library Visitor Log. All rights reserved.
