@@ -19,5 +19,7 @@ Why this happens:
 Vercel's free plan uses shared domains, and sometimes other projects on the same platform get flagged, which temporarily affects neighboring subdomains. It usually resolves within 24–72 hours after submitting the report.
 
 
-------------------
 2BSIT-1 Villa, Felicity Zoe O.
+
+------------------
+© 2026 New Era University. All Rights Reserved.
