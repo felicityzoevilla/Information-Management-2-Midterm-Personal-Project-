@@ -195,3 +195,33 @@ th { background: rgba(255,255,255,0.1); color: var(--neu-red); text-transform: u
     animation: pulse 2s infinite;
 }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+.btn-google {
+    background: white;
+    color: #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 0.88rem;
+    border: 1px solid rgba(255,255,255,0.3);
+    transition: 0.3s;
+}
+.btn-google:hover { background: #f1f1f1; }
+ 
+.divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0 2px;
+    opacity: 0.6;
+    font-size: 0.78rem;
+}
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(255,255,255,0.35);
+}
