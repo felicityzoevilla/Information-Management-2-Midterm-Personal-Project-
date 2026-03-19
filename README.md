@@ -4,7 +4,7 @@ A digital visitor login system for the **New Era University Library**, designed 
 
 > 🔗 https://villa-midterm-project-im-neulibrarylog.vercel.app/
 
-Optional: jcesperanza@neu.edu.ph Password: adminjcesperanza
+(for admin acc Optional): jcesperanza@neu.edu.ph Password: adminjcesperanza
 
 **Features**
 - ✅ **Visitor Login Form** — Captures visitor name, ID number (e.g. 12-3456-789), purpose of visit, and time of entry
@@ -12,6 +12,5 @@ Optional: jcesperanza@neu.edu.ph Password: adminjcesperanza
 - ✅ **Clean UI** — Simple and intuitive interface suited for library use
 - ✅ **Responsive Design** — Works on desktop and mobile browsers
 
-
------------------------
-© 2026 NEU Library Visitor Log. All rights reserved.
+------------------
+2BSIT-1 Villa, Felicity Zoe O.
