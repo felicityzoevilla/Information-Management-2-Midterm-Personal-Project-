@@ -2,7 +2,7 @@
 
 A digital visitor login system for the **New Era University Library**, designed to streamline and record the entry of students, faculty, and guests into the library premises.
 
-> 🔗
+> 🔗 https://information-management-2-midterm-pe.vercel.app/
 
 
 **Features**
