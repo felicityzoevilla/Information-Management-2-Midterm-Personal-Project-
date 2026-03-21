@@ -1,47 +1,15 @@
-// Use environment variables or a config file that isn't hardcoded if possible
+// ── Config ─────────────────────────────────────────────────────
 const SUPABASE_URL = 'https://auxwdymnfmbqhdcufeoc.supabase.co';
-const SUPABASE_ANON = 'SUPABASE_ANON=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1eHdkeW1uZm1icWhkY3VmZW9jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4MDI3MjYsImV4cCI6MjA4OTM3ODcyNn0.w4M7zdLwAHfyP1sMEbLS9E-oKOtV5mCkG9SRCic3H4M'; // Move this to Vercel Env Vars!
+// ✅ FIXED: Removed "SUPABASE_ANON=" prefix that was breaking the key
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1eHdkeW1uZm1icWhkY3VmZW9jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4MDI3MjYsImV4cCI6MjA4OTM3ODcyNn0.w4M7zdLwAHfyP1sMEbLS9E-oKOtV5mCkG9SRCic3H4M';
 
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_ANON);
 
-async function handleLogin() {
-    const email = document.getElementById('email-input').value.trim().toLowerCase();
-    const pass = document.getElementById('pass-input').value;
-
-    if (!email || !pass) {
-        showToast('Please enter credentials.', 'error');
-        return;
-    }
-
-    showLoading('Authenticating...');
-    
-    // 1. Authenticate with Supabase Auth
-    const { data, error } = await db.auth.signInWithPassword({
-        email: email,
-        password: pass,
-    });
-
-    if (error) {
-        hideLoading();
-        showToast(error.message, 'error');
-        return;
-    }
-
-    // 2. Fetch User Profile to check if Admin or Regular
-    const { data: profile, error: profileError } = await db
-        .from('user_profiles')
-        .select('*')
-        .eq('id', data.user.id)
-        .single();
-
-    hideLoading();
-
-    if (profile) {
-        // Direct the user based on their profile data
-        setupUserSession(profile); 
-    }
-}
+// ── Global State (✅ FIXED: explicitly declared, no more implicit globals) ──
+let selectedMode = 'regular';
+let realtimeChannel = null;
+let chartInstance = null;
 
 // ── Courses Map ────────────────────────────────────────────────
 const coursesByCollege = {
@@ -72,11 +40,9 @@ function showLoading(msg = '⏳ Please wait...') {
     el.textContent = msg;
     el.classList.remove('hidden');
 }
-
 function hideLoading() {
     document.getElementById('loading-overlay').classList.add('hidden');
 }
-
 function showToast(msg, type = 'success') {
     const t = document.createElement('div');
     t.className = `toast ${type}`;
@@ -84,11 +50,9 @@ function showToast(msg, type = 'success') {
     document.body.appendChild(t);
     setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 3500);
 }
-
 function todayPH() {
     return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
 }
-
 function formatTimePH(isoString) {
     return new Date(isoString).toLocaleTimeString('en-US', {
         hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Manila'
@@ -104,19 +68,16 @@ function switchLoginMode(mode) {
     document.getElementById('login-hint').innerText = mode === 'admin' ? 'Admin credentials required.' : 'Enter your institutional email to proceed.';
     document.getElementById('register-link-wrap').style.display = mode === 'admin' ? 'none' : '';
 }
-
 function showRegister() {
     document.getElementById('login-container').classList.add('hidden');
     document.getElementById('register-container').classList.remove('hidden');
     document.getElementById('top-switcher').style.display = 'none';
 }
-
 function showLogin() {
     document.getElementById('register-container').classList.add('hidden');
     document.getElementById('login-container').classList.remove('hidden');
     document.getElementById('top-switcher').style.display = '';
 }
-
 function updateTime() {
     const now = new Date();
     const clockEl = document.getElementById('live-clock');
@@ -141,7 +102,6 @@ function updateCourses() {
         sel.appendChild(o);
     });
 }
-
 function updateRegCourses() {
     const college = document.getElementById('reg-college').value;
     const sel = document.getElementById('reg-course');
@@ -155,12 +115,12 @@ function updateRegCourses() {
 
 // ── Register ───────────────────────────────────────────────────
 async function handleRegister() {
-    const name = document.getElementById('reg-name').value.trim();
-    const email = document.getElementById('reg-email').value.trim().toLowerCase();
-    const id_num = document.getElementById('reg-id').value.trim();
+    const name    = document.getElementById('reg-name').value.trim();
+    const email   = document.getElementById('reg-email').value.trim().toLowerCase();
+    const id_num  = document.getElementById('reg-id').value.trim();
     const college = document.getElementById('reg-college').value;
-    const course = document.getElementById('reg-course').value;
-    const pass = document.getElementById('reg-pass').value;
+    const course  = document.getElementById('reg-course').value;
+    const pass    = document.getElementById('reg-pass').value;
     const confirm = document.getElementById('reg-confirm').value;
 
     if (!name || !email || !id_num || !college || !course || !pass || !confirm) {
@@ -200,17 +160,16 @@ async function handleRegister() {
 
     hideLoading(); btn.disabled = false; btn.textContent = 'Create Account';
     showToast(`Account created! Welcome, ${name}. You may now log in. ✅`);
-
     ['reg-name', 'reg-email', 'reg-id', 'reg-pass', 'reg-confirm'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('reg-college').value = '';
     document.getElementById('reg-course').innerHTML = '<option value="" disabled selected>Select Program / Course</option>';
     setTimeout(showLogin, 1500);
 }
 
-// ── Login ──────────────────────────────────────────────────────
+// ── Login (✅ FIXED: duplicate removed, only one handleLogin) ──
 async function handleLogin() {
     const email = document.getElementById('email-input').value.trim().toLowerCase();
-    const pass = document.getElementById('pass-input').value;
+    const pass  = document.getElementById('pass-input').value;
     if (!email || !pass) { showToast('Please enter credentials.', 'error'); return; }
 
     const btn = document.getElementById('login-btn');
@@ -241,21 +200,14 @@ async function handleGoogleLogin() {
     btn.disabled = true;
     btn.innerHTML = `<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" height="18"> Redirecting…`;
     showLoading('Redirecting to Google...');
-
-    // Save the selected mode (admin/regular) before Google redirects away
     localStorage.setItem('loginMode', selectedMode);
-
     const { error } = await db.auth.signInWithOAuth({
         provider: 'google',
-        options: {
-            redirectTo: window.location.href
-        }
+        options: { redirectTo: window.location.href }
     });
-
     hideLoading();
     btn.disabled = false;
     btn.innerHTML = `<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" height="18"> Sign in with Google`;
-
     if (error) showToast('Google sign-in failed: ' + error.message, 'error');
 }
 
@@ -267,10 +219,9 @@ function enterRegular(email, profile) {
     document.getElementById('admin-dashboard').classList.add('hidden');
     document.getElementById('welcome-msg').innerText = `Welcome, ${profile?.full_name || email}!`;
     document.getElementById('view-title').innerText = 'Visitor Entry Form';
-
     if (profile) {
         document.getElementById('v-name').value = profile.full_name || '';
-        document.getElementById('v-id').value = profile.id_number || '';
+        document.getElementById('v-id').value   = profile.id_number || '';
         if (profile.college) {
             document.getElementById('college-select').value = profile.college;
             updateCourses();
@@ -280,7 +231,6 @@ function enterRegular(email, profile) {
         }
     }
 }
-
 function enterAdmin() {
     document.getElementById('login-container').classList.add('hidden');
     document.getElementById('app-content').style.display = 'block';
@@ -294,8 +244,7 @@ function enterAdmin() {
     loadAdminData();
     subscribeRealtime();
 }
-
-async function logoutUser() { await db.auth.signOut(); location.reload(); }
+async function logoutUser()  { await db.auth.signOut(); location.reload(); }
 async function logoutAdmin() {
     await db.auth.signOut();
     if (realtimeChannel) db.removeChannel(realtimeChannel);
@@ -304,12 +253,12 @@ async function logoutAdmin() {
 
 // ── Submit Visitor Log ─────────────────────────────────────────
 async function submitLog() {
-    const name = document.getElementById('v-name').value.trim();
-    const id_num = document.getElementById('v-id').value.trim();
+    const name    = document.getElementById('v-name').value.trim();
+    const id_num  = document.getElementById('v-id').value.trim();
     const college = document.getElementById('college-select').value;
-    const course = document.getElementById('course-select').value;
-    const type = document.getElementById('visitor-type').value;
-    const reason = document.getElementById('v-reason').value;
+    const course  = document.getElementById('course-select').value;
+    const type    = document.getElementById('visitor-type').value;
+    const reason  = document.getElementById('v-reason').value;
 
     if (!name || !id_num || !college || !course || !type || !reason) {
         showToast('Please complete all fields.', 'error'); return;
@@ -324,7 +273,6 @@ async function submitLog() {
     }]);
 
     hideLoading(); btn.disabled = false; btn.textContent = 'Submit Entry';
-
     if (error) { showToast('Error: ' + error.message, 'error'); return; }
 
     showToast(`Entry saved! Welcome, ${name} 🎉`);
@@ -337,7 +285,7 @@ async function loadAdminData() {
     showLoading('Loading dashboard...');
     const dateVal = document.getElementById('filter-date').value || todayPH();
     const college = document.getElementById('filter-college').value;
-    const reason = document.getElementById('filter-reason').value;
+    const reason  = document.getElementById('filter-reason').value;
 
     let query = db.from('visitor_logs').select('*')
         .gte('time_in', dateVal + 'T00:00:00')
@@ -345,11 +293,10 @@ async function loadAdminData() {
         .order('time_in', { ascending: false });
 
     if (college !== 'all') query = query.eq('college', college);
-    if (reason !== 'all') query = query.eq('reason', reason);
+    if (reason  !== 'all') query = query.eq('reason',  reason);
 
     const { data, error } = await query;
     hideLoading();
-
     if (error) { showToast('Error loading data: ' + error.message, 'error'); return; }
 
     renderTable(data || []);
@@ -412,7 +359,7 @@ function renderChart(rows) {
             responsive: true, maintainAspectRatio: false,
             scales: {
                 y: { ticks: { color: 'white', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.1)' } },
-                x: { ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.1)' } }
+                x: { ticks: { color: 'white' },              grid: { color: 'rgba(255,255,255,0.1)' } }
             },
             plugins: { legend: { labels: { color: 'white' } } }
         }
@@ -434,20 +381,17 @@ function downloadPDF() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
-    // Header background — NEU blue
     doc.setFillColor(0, 51, 102);
     doc.rect(0, 0, 297, 28, 'F');
 
-    // Title
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
     doc.text('NEW ERA UNIVERSITY — Library Visitor Log', 148.5, 11, { align: 'center' });
 
-    // Info row: date, total, peak, print time
-    const dateVal = document.getElementById('filter-date').value || todayPH();
+    const dateVal  = document.getElementById('filter-date').value || todayPH();
     const totalVal = document.getElementById('total-v-count').innerText;
-    const peakVal = document.getElementById('peak-hours-display').innerText;
+    const peakVal  = document.getElementById('peak-hours-display').innerText;
     const printedAt = new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' });
 
     doc.setFontSize(9);
@@ -457,52 +401,28 @@ function downloadPDF() {
         148.5, 21, { align: 'center' }
     );
 
-    // Collect rows from the visible table
     const rows = [];
     document.querySelectorAll('#visitor-tbody tr').forEach(tr => {
         const cells = [...tr.querySelectorAll('td')].map(td => td.innerText);
         if (cells.length === 7) rows.push(cells);
     });
 
-    if (!rows.length) {
-        showToast('No records to download.', 'error');
-        return;
-    }
+    if (!rows.length) { showToast('No records to download.', 'error'); return; }
 
-    // Table with NEU red header and alternating rows
     doc.autoTable({
         startY: 32,
         head: [['Time-In', 'Full Name', 'ID Number', 'College', 'Program / Course', 'Type', 'Reason']],
         body: rows,
-        styles: {
-            fontSize: 8,
-            cellPadding: 3,
-            textColor: [30, 30, 30],
-            lineColor: [200, 200, 200],
-            lineWidth: 0.2,
-        },
-        headStyles: {
-            fillColor: [204, 0, 0],
-            textColor: [255, 255, 255],
-            fontStyle: 'bold',
-            fontSize: 8.5,
-        },
-        alternateRowStyles: {
-            fillColor: [240, 245, 255],
-        },
+        styles: { fontSize: 8, cellPadding: 3, textColor: [30, 30, 30], lineColor: [200, 200, 200], lineWidth: 0.2 },
+        headStyles: { fillColor: [204, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
+        alternateRowStyles: { fillColor: [240, 245, 255] },
         columnStyles: {
-            0: { cellWidth: 22 },
-            1: { cellWidth: 45 },
-            2: { cellWidth: 28 },
-            3: { cellWidth: 20 },
-            4: { cellWidth: 80 },
-            5: { cellWidth: 20 },
-            6: { cellWidth: 32 },
+            0: { cellWidth: 22 }, 1: { cellWidth: 45 }, 2: { cellWidth: 28 },
+            3: { cellWidth: 20 }, 4: { cellWidth: 80 }, 5: { cellWidth: 20 }, 6: { cellWidth: 32 }
         },
-        margin: { left: 10, right: 10 },
+        margin: { left: 10, right: 10 }
     });
 
-    // Page footer on every page
     const pageCount = doc.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
@@ -510,9 +430,7 @@ function downloadPDF() {
         doc.setTextColor(150);
         doc.text(
             `Page ${i} of ${pageCount}  —  NEU Library Visitor Log  —  Confidential`,
-            148.5,
-            doc.internal.pageSize.height - 5,
-            { align: 'center' }
+            148.5, doc.internal.pageSize.height - 5, { align: 'center' }
         );
     }
 
@@ -525,21 +443,14 @@ function downloadPDF() {
     const { data: { session } } = await db.auth.getSession();
     if (!session) return;
 
-    // Clean the #access_token=... from the URL bar
     window.history.replaceState(null, '', window.location.pathname);
 
-    const email = session.user.email;
-
-    // Read the saved mode from before the Google redirect
+    const email     = session.user.email;
     const savedMode = localStorage.getItem('loginMode') || 'regular';
     localStorage.removeItem('loginMode');
 
     if (savedMode === 'admin') {
-        const { data: adminRow } = await db.from('admin_users')
-            .select('email')
-            .eq('email', email)
-            .single();
-
+        const { data: adminRow } = await db.from('admin_users').select('email').eq('email', email).single();
         if (!adminRow) {
             showToast('You do not have admin privileges.', 'error');
             await db.auth.signOut();
@@ -549,21 +460,17 @@ function downloadPDF() {
         return;
     }
 
-    // Regular user flow
     const meta = session.user.user_metadata;
-    const { data: existingProfile } = await db.from('user_profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single();
+    const { data: existingProfile } = await db.from('user_profiles').select('*').eq('id', session.user.id).single();
 
     if (!existingProfile) {
         await db.from('user_profiles').insert([{
-            id: session.user.id,
-            full_name: meta.full_name || meta.name || email,
-            email: email,
-            id_number: '',
-            college: '',
-            course: ''
+            id:         session.user.id,
+            full_name:  meta.full_name || meta.name || email,
+            email:      email,
+            id_number:  '',
+            college:    '',
+            course:     ''
         }]);
     }
 
