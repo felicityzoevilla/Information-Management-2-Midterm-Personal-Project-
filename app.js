@@ -1,479 +1,485 @@
-// ── Config ─────────────────────────────────────────────────────
-const SUPABASE_URL = 'https://auxwdymnfmbqhdcufeoc.supabase.co';
-// ✅ FIXED: Removed "SUPABASE_ANON=" prefix that was breaking the key
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1eHdkeW1uZm1icWhkY3VmZW9jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4MDI3MjYsImV4cCI6MjA4OTM3ODcyNn0.w4M7zdLwAHfyP1sMEbLS9E-oKOtV5mCkG9SRCic3H4M';
+// ============================================================
+//  NEU Library Visitor Log — app.js
+//  Supabase + Google OAuth
+// ============================================================
+
+const SUPABASE_URL = "https://axnlinuccahemeppqkae.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4bmxpbnVjY2FoZW1lcHBxa2FlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwNDM3ODcsImV4cCI6MjA4OTYxOTc4N30.7udhzS79oP-GXTj510j9fV8LA9Uu9bbQvrZ-uK0OKiI";
 
 const { createClient } = supabase;
-const db = createClient(SUPABASE_URL, SUPABASE_ANON);
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ── Global State (✅ FIXED: explicitly declared, no more implicit globals) ──
-let selectedMode = 'regular';
-let realtimeChannel = null;
+// ── Admin emails (add more as needed) ───────────────────────
+const ADMIN_EMAILS = ["admin@neu.edu.ph", "library@neu.edu.ph"];
+
+// ── State ────────────────────────────────────────────────────
+let currentUser = null;
+let isAdminMode = false;
 let chartInstance = null;
+let realtimeChannel = null;
 
-// ── Courses Map ────────────────────────────────────────────────
-const coursesByCollege = {
-    "COAc": ["Bachelor of Science in Accountancy", "Bachelor of Science in Accounting Information System"],
-    "COAg": ["Bachelor of Science in Agriculture"],
-    "CAS": ["Bachelor of Arts in Economics", "Bachelor of Arts in Political Science", "Bachelor of Science in Biology", "Bachelor of Science in Psychology", "Bachelor of Public Administration"],
-    "CBA": ["Bachelor of Science in Business Administration Major in Financial Management", "Bachelor of Science in Business Administration Major in Human Resource Development Management", "Bachelor of Science in Business Administration Major in Legal Management", "Bachelor of Science in Business Administration Major in Marketing Management", "Bachelor of Science in Entrepreneurship", "Bachelor of Science in Real Estate Management"],
-    "COC": ["Bachelor of Arts in Broadcasting", "Bachelor of Arts in Communication", "Bachelor of Arts in Journalism"],
-    "CICS": ["Bachelor of Library and Information Science", "Bachelor of Science in Information Technology", "Bachelor of Science in Computer Science", "Bachelor of Science in Entertainment and Multimedia Computing with Specialization in Digital Animation Technology", "Bachelor of Science in Entertainment and Multimedia Computing with Specialization in Game Development", "Bachelor of Science in Information System"],
-    "COCC": ["Bachelor of Science in Criminology"],
-    "CED": ["Bachelor of Elementary Education", "Bachelor of Elementary Education with Specialization in Preschool Education", "Bachelor of Elementary Education with Specialization in Special Education", "Bachelor of Secondary Education Major in Music, Arts, and Physical Education", "Bachelor of Secondary Education Major in English", "Bachelor of Secondary Education Major in Filipino", "Bachelor of Secondary Education Major in Mathematics", "Bachelor of Secondary Education Major in Science", "Bachelor of Secondary Education Major in Social Studies", "Bachelor of Secondary Education Major in Technology and Livelihood Education"],
-    "CEA": ["Bachelor of Science in Architecture", "Bachelor of Science in Astronomy", "Bachelor of Science in Civil Engineering", "Bachelor of Science in Electrical Engineering", "Bachelor of Science in Electronics Engineering", "Bachelor of Science in Industrial Engineering", "Bachelor of Science in Mechanical Engineering"],
-    "CMT": ["Bachelor of Science in Medical Technology"],
-    "CM": ["Diploma in Midwifery"],
-    "COM": ["Bachelor of Music in Choral Conducting", "Bachelor of Music in Music Education", "Bachelor of Music in Piano", "Bachelor of Music in Voice"],
-    "CON": ["Bachelor of Science in Nursing"],
-    "CPT": ["Bachelor of Science in Physical Therapy"],
-    "CRT": ["Bachelor of Science in Respiratory Therapy"],
-    "SOIR": ["Bachelor of Arts in Foreign Service"],
-    "SGS": ["Doctor in Business Administration", "Master in Business Administration", "Master in Business Administration Major in Human Resource Management", "Master in Business Administration Major in Organizational Development", "Doctor of Philosophy in Education Major in Bilingual Education", "Doctor of Philosophy in Education Major in Early Childhood Education", "Doctor of Philosophy in Education Major in Educational Leadership", "Doctor of Philosophy in Education Major in Educational Management", "Doctor of Philosophy in Education Major in Guidance & Counseling", "Doctor of Philosophy in Education Major in Instructional Leadership", "Doctor of Philosophy in Education Major in Special Education and Inclusive Education", "Master of Arts in Education Major in Early Childhood Education", "Master of Arts in Education Major in Educational Management", "Master of Arts in Education Major in Educational Psychology", "Master of Arts in Education Major in Educational Technology", "Master of Arts in Education Major in Environmental Education", "Master of Arts in Education Major in Filipino", "Master of Arts in Education Major in Guidance and Counseling", "Master of Arts in Education Major in Language Education", "Master of Arts in Education Major in Mathematics Education", "Master of Arts in Education Major in Reading Education", "Master of Arts in Education Major in Science Education", "Master of Arts in Education Major in Social Science", "Master of Arts in Education Major in Special Education and Inclusive Education"],
-    "STAFF": ["Staff"],
-    "Visitor": ["Visitor"]
+// ============================================================
+//  COURSE MAP
+// ============================================================
+const courseMap = {
+  COAc: ["BS Accountancy", "BS Management Accounting"],
+  COAg: ["BS Agriculture", "BS Agricultural Engineering"],
+  CAS:  ["BS Biology", "BS Psychology", "BA Communication", "AB English", "BS Mathematics", "BS Chemistry"],
+  CBA:  ["BS Business Administration", "BS Entrepreneurship", "BS Office Administration"],
+  COC:  ["AB Communication", "BS Journalism", "BS Broadcasting"],
+  CICS: ["BS Computer Science", "BS Information Technology", "BS Information Systems"],
+  COCC: ["BS Criminology"],
+  CED:  ["BEEd", "BSEd - English", "BSEd - Mathematics", "BSEd - Science", "BSEd - Filipino", "BSEd - MAPEH"],
+  CEA:  ["BS Civil Engineering", "BS Electrical Engineering", "BS Electronics Engineering", "BS Architecture", "BS Mechanical Engineering"],
+  CMT:  ["BS Medical Technology"],
+  CM:   ["BS Midwifery"],
+  COM:  ["BS Music", "BA Music"],
+  CON:  ["BS Nursing"],
+  CPT:  ["BS Physical Therapy"],
+  CRT:  ["BS Respiratory Therapy"],
+  SOIR: ["BS International Relations", "BA Political Science"],
+  SGS:  ["Master of Arts", "Master of Science", "Doctor of Philosophy"],
+  STAFF:   ["N/A"],
+  Visitor: ["N/A"],
 };
 
-// ── Helpers ────────────────────────────────────────────────────
-function showLoading(msg = '⏳ Please wait...') {
-    const el = document.getElementById('loading-overlay');
-    el.textContent = msg;
-    el.classList.remove('hidden');
-}
-function hideLoading() {
-    document.getElementById('loading-overlay').classList.add('hidden');
-}
-function showToast(msg, type = 'success') {
-    const t = document.createElement('div');
-    t.className = `toast ${type}`;
-    t.textContent = msg;
-    document.body.appendChild(t);
-    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 3500);
-}
-function todayPH() {
-    return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
-}
-function formatTimePH(isoString) {
-    return new Date(isoString).toLocaleTimeString('en-US', {
-        hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Manila'
-    });
+function populateCourses(collegeSelectId, courseSelectId) {
+  const college = document.getElementById(collegeSelectId).value;
+  const courseSelect = document.getElementById(courseSelectId);
+  courseSelect.innerHTML = '<option value="" disabled selected>Select Program / Course</option>';
+  (courseMap[college] || []).forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c; opt.textContent = c;
+    courseSelect.appendChild(opt);
+  });
 }
 
-// ── UI ─────────────────────────────────────────────────────────
-function switchLoginMode(mode) {
-    selectedMode = mode;
-    document.getElementById('btn-reg').classList.toggle('active', mode === 'regular');
-    document.getElementById('btn-adm').classList.toggle('active', mode === 'admin');
-    document.getElementById('login-title').innerText = mode === 'admin' ? 'Admin Portal' : 'New Era University Library Visitor Log';
-    document.getElementById('login-hint').innerText = mode === 'admin' ? 'Admin credentials required.' : 'Enter your institutional email to proceed.';
-    document.getElementById('register-link-wrap').style.display = mode === 'admin' ? 'none' : '';
+function updateCourses()    { populateCourses("college-select", "course-select"); }
+function updateRegCourses() { populateCourses("reg-college",    "reg-course"); }
+
+// ============================================================
+//  UI HELPERS
+// ============================================================
+function showLoading(on) {
+  document.getElementById("loading-overlay").classList.toggle("hidden", !on);
 }
-function showRegister() {
-    document.getElementById('login-container').classList.add('hidden');
-    document.getElementById('register-container').classList.remove('hidden');
-    document.getElementById('top-switcher').style.display = 'none';
+
+function toast(msg, type = "success") {
+  const t = document.createElement("div");
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = "0"; setTimeout(() => t.remove(), 400); }, 3000);
 }
+
 function showLogin() {
-    document.getElementById('register-container').classList.add('hidden');
-    document.getElementById('login-container').classList.remove('hidden');
-    document.getElementById('top-switcher').style.display = '';
-}
-function updateTime() {
-    const now = new Date();
-    const clockEl = document.getElementById('live-clock');
-    if (clockEl) {
-        clockEl.innerText = 'Philippine Standard Time: ' + now.toLocaleTimeString('en-US', {
-            hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Manila'
-        });
-        document.getElementById('current-date-display').innerText = now.toLocaleDateString('en-US', {
-            month: 'long', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila'
-        });
-    }
-}
-setInterval(updateTime, 1000);
-
-function updateCourses() {
-    const college = document.getElementById('college-select').value;
-    const sel = document.getElementById('course-select');
-    sel.innerHTML = '<option value="" disabled selected>Select Program/Course</option>';
-    (coursesByCollege[college] || []).forEach(c => {
-        const o = document.createElement('option');
-        o.value = o.textContent = c;
-        sel.appendChild(o);
-    });
-}
-function updateRegCourses() {
-    const college = document.getElementById('reg-college').value;
-    const sel = document.getElementById('reg-course');
-    sel.innerHTML = '<option value="" disabled selected>Select Program / Course</option>';
-    (coursesByCollege[college] || []).forEach(c => {
-        const o = document.createElement('option');
-        o.value = o.textContent = c;
-        sel.appendChild(o);
-    });
+  document.getElementById("register-container").classList.add("hidden");
+  document.getElementById("login-container").classList.remove("hidden");
 }
 
-// ── Register ───────────────────────────────────────────────────
-async function handleRegister() {
-    const name    = document.getElementById('reg-name').value.trim();
-    const email   = document.getElementById('reg-email').value.trim().toLowerCase();
-    const id_num  = document.getElementById('reg-id').value.trim();
-    const college = document.getElementById('reg-college').value;
-    const course  = document.getElementById('reg-course').value;
-    const pass    = document.getElementById('reg-pass').value;
-    const confirm = document.getElementById('reg-confirm').value;
-
-    if (!name || !email || !id_num || !college || !course || !pass || !confirm) {
-        showToast('Please fill in all fields.', 'error'); return;
-    }
-    if (!email.endsWith('@neu.edu.ph')) {
-        showToast('Please use your institutional email (@neu.edu.ph).', 'error'); return;
-    }
-    if (pass.length < 6) {
-        showToast('Password must be at least 6 characters.', 'error'); return;
-    }
-    if (pass !== confirm) {
-        showToast('Passwords do not match.', 'error'); return;
-    }
-
-    const btn = document.getElementById('register-btn');
-    btn.disabled = true; btn.textContent = 'Creating account…';
-    showLoading('Creating your account...');
-
-    const { data, error } = await db.auth.signUp({
-        email,
-        password: pass,
-        options: { data: { full_name: name, id_number: id_num, college, course } }
-    });
-
-    if (error) {
-        hideLoading(); btn.disabled = false; btn.textContent = 'Create Account';
-        showToast('Registration failed: ' + error.message, 'error'); return;
-    }
-
-    const userId = data.user?.id;
-    if (userId) {
-        await db.from('user_profiles').insert([{
-            id: userId, full_name: name, email, id_number: id_num, college, course
-        }]);
-    }
-
-    hideLoading(); btn.disabled = false; btn.textContent = 'Create Account';
-    showToast(`Account created! Welcome, ${name}. You may now log in. ✅`);
-    ['reg-name', 'reg-email', 'reg-id', 'reg-pass', 'reg-confirm'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('reg-college').value = '';
-    document.getElementById('reg-course').innerHTML = '<option value="" disabled selected>Select Program / Course</option>';
-    setTimeout(showLogin, 1500);
+function showRegister() {
+  document.getElementById("login-container").classList.add("hidden");
+  document.getElementById("register-container").classList.remove("hidden");
 }
 
-// ── Login (✅ FIXED: duplicate removed, only one handleLogin) ──
+function switchLoginMode(mode) {
+  isAdminMode = mode === "admin";
+  document.getElementById("btn-reg").classList.toggle("active", !isAdminMode);
+  document.getElementById("btn-adm").classList.toggle("active",  isAdminMode);
+
+  const hint   = document.getElementById("login-hint");
+  const google = document.getElementById("google-btn");
+  const regLink = document.getElementById("register-link-wrap");
+
+  if (isAdminMode) {
+    hint.textContent = "Admin access only. Use your admin credentials.";
+    google.classList.add("hidden");
+    regLink.classList.add("hidden");
+  } else {
+    hint.textContent = "Enter your institutional email to proceed.";
+    google.classList.remove("hidden");
+    regLink.classList.remove("hidden");
+  }
+}
+
+// ============================================================
+//  AUTH — LOGIN / REGISTER / GOOGLE
+// ============================================================
 async function handleLogin() {
-    const email = document.getElementById('email-input').value.trim().toLowerCase();
-    const pass  = document.getElementById('pass-input').value;
-    if (!email || !pass) { showToast('Please enter credentials.', 'error'); return; }
+  const email = document.getElementById("email-input").value.trim();
+  const pass  = document.getElementById("pass-input").value;
+  if (!email || !pass) return toast("Please enter email and password.", "error");
 
-    const btn = document.getElementById('login-btn');
-    btn.disabled = true; btn.textContent = 'Logging in…';
-    showLoading('Authenticating...');
+  showLoading(true);
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+  showLoading(false);
 
-    const { data, error } = await db.auth.signInWithPassword({ email, password: pass });
-    hideLoading(); btn.disabled = false; btn.textContent = 'Login';
+  if (error) return toast(error.message, "error");
 
-    if (error || !data.user) { showToast('Invalid email or password.', 'error'); return; }
-
-    if (selectedMode === 'admin') {
-        const { data: adminRow } = await db.from('admin_users').select('email').eq('email', email).single();
-        if (!adminRow) {
-            showToast('You do not have admin privileges.', 'error');
-            await db.auth.signOut(); return;
-        }
-        enterAdmin();
-    } else {
-        const { data: profile } = await db.from('user_profiles').select('*').eq('id', data.user.id).single();
-        enterRegular(data.user.email, profile);
-    }
+  const user = data.user;
+  const admin = ADMIN_EMAILS.includes(user.email) || isAdminMode;
+  enterApp(user, admin);
 }
 
-// ── Google Login ───────────────────────────────────────────────
 async function handleGoogleLogin() {
-    const btn = document.getElementById('google-btn');
-    btn.disabled = true;
-    btn.innerHTML = `<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" height="18"> Redirecting…`;
-    showLoading('Redirecting to Google...');
-    localStorage.setItem('loginMode', selectedMode);
-    const { error } = await db.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: window.location.href }
-    });
-    hideLoading();
-    btn.disabled = false;
-    btn.innerHTML = `<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" height="18"> Sign in with Google`;
-    if (error) showToast('Google sign-in failed: ' + error.message, 'error');
+  showLoading(true);
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: window.location.href },
+  });
+  showLoading(false);
+  if (error) toast(error.message, "error");
 }
 
-// ── Enter Views ────────────────────────────────────────────────
-function enterRegular(email, profile) {
-    document.getElementById('login-container').classList.add('hidden');
-    document.getElementById('app-content').style.display = 'block';
-    document.getElementById('visitor-form').classList.remove('hidden');
-    document.getElementById('admin-dashboard').classList.add('hidden');
-    document.getElementById('welcome-msg').innerText = `Welcome, ${profile?.full_name || email}!`;
-    document.getElementById('view-title').innerText = 'Visitor Entry Form';
-    if (profile) {
-        document.getElementById('v-name').value = profile.full_name || '';
-        document.getElementById('v-id').value   = profile.id_number || '';
-        if (profile.college) {
-            document.getElementById('college-select').value = profile.college;
-            updateCourses();
-            setTimeout(() => {
-                if (profile.course) document.getElementById('course-select').value = profile.course;
-            }, 100);
-        }
-    }
+async function handleRegister() {
+  const name    = document.getElementById("reg-name").value.trim();
+  const email   = document.getElementById("reg-email").value.trim();
+  const idNum   = document.getElementById("reg-id").value.trim();
+  const college = document.getElementById("reg-college").value;
+  const course  = document.getElementById("reg-course").value;
+  const pass    = document.getElementById("reg-pass").value;
+  const confirm = document.getElementById("reg-confirm").value;
+
+  if (!name || !email || !idNum || !college || !course || !pass)
+    return toast("Please fill in all fields.", "error");
+  if (pass.length < 6)
+    return toast("Password must be at least 6 characters.", "error");
+  if (pass !== confirm)
+    return toast("Passwords do not match.", "error");
+
+  showLoading(true);
+  const { data, error } = await sb.auth.signUp({
+    email,
+    password: pass,
+    options: {
+      data: { full_name: name, id_number: idNum, college, course },
+    },
+  });
+  showLoading(false);
+
+  if (error) return toast(error.message, "error");
+
+  // Also save profile to `profiles` table (optional but recommended)
+  if (data.user) {
+    await sb.from("profiles").upsert({
+      id:        data.user.id,
+      full_name: name,
+      id_number: idNum,
+      college,
+      course,
+      email,
+    });
+  }
+
+  toast("Account created! Please check your email to confirm.", "success");
+  showLogin();
 }
-function enterAdmin() {
-    document.getElementById('login-container').classList.add('hidden');
-    document.getElementById('app-content').style.display = 'block';
-    document.getElementById('visitor-form').classList.add('hidden');
-    document.getElementById('admin-dashboard').classList.remove('hidden');
-    document.getElementById('view-title').innerText = 'Admin Analytics Dashboard';
-    document.getElementById('welcome-msg').innerText = 'System Administrator Access';
-    document.getElementById('top-switcher').style.display = 'none';
-    document.getElementById('filter-date').value = todayPH();
-    updateTime();
+
+// ============================================================
+//  SESSION RESTORE (OAuth redirect / page reload)
+// ============================================================
+async function restoreSession() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return;
+
+  const user  = session.user;
+  const admin = ADMIN_EMAILS.includes(user.email);
+
+  // Pre-fill form from user metadata if available
+  const meta = user.user_metadata || {};
+  if (meta.full_name) document.getElementById("v-name").value = meta.full_name;
+  if (meta.id_number) document.getElementById("v-id").value   = meta.id_number;
+
+  enterApp(user, admin);
+}
+
+// ============================================================
+//  ENTER APP
+// ============================================================
+function enterApp(user, isAdmin) {
+  currentUser = user;
+
+  document.getElementById("login-container").classList.add("hidden");
+  document.getElementById("register-container").classList.add("hidden");
+  document.getElementById("top-switcher").classList.add("hidden");
+  document.getElementById("app-content").style.display = "block";
+
+  const meta = user.user_metadata || {};
+  const name = meta.full_name || meta.name || user.email;
+
+  document.getElementById("welcome-msg").textContent =
+    `Welcome, ${name}!`;
+
+  if (isAdmin) {
+    document.getElementById("view-title").textContent = "Admin Dashboard";
+    document.getElementById("visitor-form").classList.add("hidden");
+    document.getElementById("admin-dashboard").classList.remove("hidden");
+    startClock();
     loadAdminData();
     subscribeRealtime();
-}
-async function logoutUser()  { await db.auth.signOut(); location.reload(); }
-async function logoutAdmin() {
-    await db.auth.signOut();
-    if (realtimeChannel) db.removeChannel(realtimeChannel);
-    location.reload();
+  } else {
+    document.getElementById("view-title").textContent = "Visitor Entry Form";
+    document.getElementById("visitor-form").classList.remove("hidden");
+    document.getElementById("admin-dashboard").classList.add("hidden");
+
+    // Pre-fill from metadata
+    if (meta.full_name) document.getElementById("v-name").value = meta.full_name;
+    if (meta.id_number) document.getElementById("v-id").value   = meta.id_number;
+  }
 }
 
-// ── Submit Visitor Log ─────────────────────────────────────────
+// ============================================================
+//  VISITOR FORM SUBMIT
+// ============================================================
 async function submitLog() {
-    const name    = document.getElementById('v-name').value.trim();
-    const id_num  = document.getElementById('v-id').value.trim();
-    const college = document.getElementById('college-select').value;
-    const course  = document.getElementById('course-select').value;
-    const type    = document.getElementById('visitor-type').value;
-    const reason  = document.getElementById('v-reason').value;
+  const name    = document.getElementById("v-name").value.trim();
+  const idNum   = document.getElementById("v-id").value.trim();
+  const college = document.getElementById("college-select").value;
+  const course  = document.getElementById("course-select").value;
+  const type    = document.getElementById("visitor-type").value;
+  const reason  = document.getElementById("v-reason").value;
 
-    if (!name || !id_num || !college || !course || !type || !reason) {
-        showToast('Please complete all fields.', 'error'); return;
-    }
+  if (!name || !idNum || !college || !course || !type || !reason)
+    return toast("Please fill in all fields.", "error");
 
-    const btn = document.getElementById('submit-btn');
-    btn.disabled = true; btn.textContent = 'Submitting…';
-    showLoading('Saving your entry...');
+  showLoading(true);
+  const { error } = await sb.from("visitor_logs").insert([{
+    full_name:    name,
+    id_number:    idNum,
+    college,
+    course,
+    visitor_type: type,
+    reason,
+    user_id:      currentUser?.id || null,
+    time_in:      new Date().toISOString(),
+  }]);
+  showLoading(false);
 
-    const { error } = await db.from('visitor_logs').insert([{
-        full_name: name, id_number: id_num, college, course, visitor_type: type, reason
-    }]);
+  if (error) return toast("Failed to submit: " + error.message, "error");
 
-    hideLoading(); btn.disabled = false; btn.textContent = 'Submit Entry';
-    if (error) { showToast('Error: ' + error.message, 'error'); return; }
+  toast("Entry submitted successfully! ✅");
 
-    showToast(`Entry saved! Welcome, ${name} 🎉`);
-    document.getElementById('visitor-type').value = '';
-    document.getElementById('v-reason').value = '';
+  // Clear form (keep name & id)
+  document.getElementById("college-select").selectedIndex = 0;
+  document.getElementById("course-select").innerHTML =
+    '<option value="" disabled selected>Select Program/Course</option>';
+  document.getElementById("visitor-type").selectedIndex = 0;
+  document.getElementById("v-reason").selectedIndex = 0;
 }
 
-// ── Admin Data ─────────────────────────────────────────────────
+// ============================================================
+//  LOGOUT
+// ============================================================
+async function logoutUser() {
+  await sb.auth.signOut();
+  location.reload();
+}
+
+async function logoutAdmin() {
+  if (realtimeChannel) sb.removeChannel(realtimeChannel);
+  await sb.auth.signOut();
+  location.reload();
+}
+
+// ============================================================
+//  ADMIN — LOAD DATA
+// ============================================================
 async function loadAdminData() {
-    showLoading('Loading dashboard...');
-    const dateVal = document.getElementById('filter-date').value || todayPH();
-    const college = document.getElementById('filter-college').value;
-    const reason  = document.getElementById('filter-reason').value;
+  const filterDate    = document.getElementById("filter-date").value;
+  const filterCollege = document.getElementById("filter-college").value;
+  const filterReason  = document.getElementById("filter-reason").value;
 
-    let query = db.from('visitor_logs').select('*')
-        .gte('time_in', dateVal + 'T00:00:00')
-        .lte('time_in', dateVal + 'T23:59:59')
-        .order('time_in', { ascending: false });
+  // Default to today if no date picked
+  const dateStr = filterDate || new Date().toISOString().split("T")[0];
 
-    if (college !== 'all') query = query.eq('college', college);
-    if (reason  !== 'all') query = query.eq('reason',  reason);
+  let query = sb.from("visitor_logs")
+    .select("*")
+    .gte("time_in", `${dateStr}T00:00:00`)
+    .lte("time_in", `${dateStr}T23:59:59`)
+    .order("time_in", { ascending: false });
 
-    const { data, error } = await query;
-    hideLoading();
-    if (error) { showToast('Error loading data: ' + error.message, 'error'); return; }
+  if (filterCollege !== "all") query = query.eq("college", filterCollege);
+  if (filterReason  !== "all") query = query.eq("reason",  filterReason);
 
-    renderTable(data || []);
-    renderStats(data || []);
-    renderChart(data || []);
+  const { data, error } = await query;
+  if (error) return toast("Error loading data: " + error.message, "error");
+
+  renderTable(data || []);
+  renderStats(data || [], dateStr);
+  renderChart(data || []);
 }
 
 function renderTable(rows) {
-    const tbody = document.getElementById('visitor-tbody');
-    if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;opacity:0.6;">No records found.</td></tr>';
-        return;
-    }
-    tbody.innerHTML = rows.map(r => `
-        <tr>
-            <td>${formatTimePH(r.time_in)}</td>
-            <td>${r.full_name}</td>
-            <td>${r.id_number}</td>
-            <td>${r.college}</td>
-            <td>${r.course}</td>
-            <td>${r.visitor_type}</td>
-            <td>${r.reason}</td>
-        </tr>`).join('');
+  const tbody = document.getElementById("visitor-tbody");
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;opacity:0.6;">No records found.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td>${formatTime(r.time_in)}</td>
+      <td>${r.full_name}</td>
+      <td>${r.id_number}</td>
+      <td>${r.college}</td>
+      <td>${r.course}</td>
+      <td>${r.visitor_type}</td>
+      <td>${r.reason}</td>
+    </tr>
+  `).join("");
 }
 
-function renderStats(rows) {
-    document.getElementById('total-v-count').innerText = rows.length;
-    const hourCounts = {};
-    rows.forEach(r => {
-        const h = new Date(r.time_in).getHours();
-        hourCounts[h] = (hourCounts[h] || 0) + 1;
-    });
-    const peak = Object.keys(hourCounts).sort((a, b) => hourCounts[b] - hourCounts[a])[0];
-    document.getElementById('peak-hours-display').innerText = peak !== undefined
-        ? `${parseInt(peak) % 12 || 12}:00 ${parseInt(peak) < 12 ? 'AM' : 'PM'}` : '—';
+function renderStats(rows, dateStr) {
+  document.getElementById("total-v-count").textContent = rows.length;
+  document.getElementById("current-date-display").textContent =
+    new Date(dateStr + "T00:00:00").toLocaleDateString("en-PH",
+      { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+
+  // Peak hour
+  const hourCounts = {};
+  rows.forEach(r => {
+    const h = new Date(r.time_in).getHours();
+    hourCounts[h] = (hourCounts[h] || 0) + 1;
+  });
+  const peak = Object.entries(hourCounts).sort((a, b) => b[1] - a[1])[0];
+  document.getElementById("peak-hours-display").textContent =
+    peak ? formatHour(+peak[0]) : "N/A";
 }
 
 function renderChart(rows) {
-    const ctx = document.getElementById('statChart').getContext('2d');
-    if (chartInstance) chartInstance.destroy();
-    const hourLabels = [], hourData = [];
-    for (let h = 7; h <= 19; h++) {
-        hourLabels.push(`${h % 12 || 12}:00 ${h < 12 ? 'AM' : 'PM'}`);
-        hourData.push(rows.filter(r => new Date(r.time_in).getHours() === h).length);
-    }
-    chartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: hourLabels,
-            datasets: [{
-                label: 'Hourly Visitors',
-                data: hourData,
-                borderColor: '#00d4ff',
-                backgroundColor: 'rgba(0,212,255,0.2)',
-                fill: true,
-                tension: 0.4
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            scales: {
-                y: { ticks: { color: 'white', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.1)' } },
-                x: { ticks: { color: 'white' },              grid: { color: 'rgba(255,255,255,0.1)' } }
-            },
-            plugins: { legend: { labels: { color: 'white' } } }
-        }
-    });
+  const hourCounts = Array(24).fill(0);
+  rows.forEach(r => hourCounts[new Date(r.time_in).getHours()]++);
+
+  const labels = hourCounts.map((_, i) => formatHour(i));
+  const ctx    = document.getElementById("statChart").getContext("2d");
+
+  if (chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{
+        label: "Visitors per Hour",
+        data:  hourCounts,
+        backgroundColor: "rgba(0, 212, 255, 0.5)",
+        borderColor:     "#00d4ff",
+        borderWidth: 1,
+        borderRadius: 5,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: "white" } } },
+      scales: {
+        x: { ticks: { color: "white" }, grid: { color: "rgba(255,255,255,0.1)" } },
+        y: { ticks: { color: "white", stepSize: 1 }, grid: { color: "rgba(255,255,255,0.1)" } },
+      },
+    },
+  });
 }
 
-// ── Realtime ───────────────────────────────────────────────────
+// ============================================================
+//  REALTIME SUBSCRIPTION
+// ============================================================
 function subscribeRealtime() {
-    realtimeChannel = db.channel('visitor_logs_changes')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'visitor_logs' }, payload => {
-            showToast(`New visitor logged: ${payload.new.full_name}`);
-            loadAdminData();
-        })
-        .subscribe();
+  realtimeChannel = sb
+    .channel("visitor_logs_realtime")
+    .on("postgres_changes",
+      { event: "INSERT", schema: "public", table: "visitor_logs" },
+      () => loadAdminData()
+    )
+    .subscribe();
 }
 
-// ── Download Records as PDF ────────────────────────────────────
-function downloadPDF() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-
-    doc.setFillColor(0, 51, 102);
-    doc.rect(0, 0, 297, 28, 'F');
-
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(16);
-    doc.setFont('helvetica', 'bold');
-    doc.text('NEW ERA UNIVERSITY — Library Visitor Log', 148.5, 11, { align: 'center' });
-
-    const dateVal  = document.getElementById('filter-date').value || todayPH();
-    const totalVal = document.getElementById('total-v-count').innerText;
-    const peakVal  = document.getElementById('peak-hours-display').innerText;
-    const printedAt = new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' });
-
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.text(
-        `Date: ${dateVal}   |   Total Visitors: ${totalVal}   |   Peak Hour: ${peakVal}   |   Printed: ${printedAt}`,
-        148.5, 21, { align: 'center' }
-    );
-
-    const rows = [];
-    document.querySelectorAll('#visitor-tbody tr').forEach(tr => {
-        const cells = [...tr.querySelectorAll('td')].map(td => td.innerText);
-        if (cells.length === 7) rows.push(cells);
+// ============================================================
+//  CLOCK
+// ============================================================
+function startClock() {
+  const el = document.getElementById("live-clock");
+  function tick() {
+    el.textContent = new Date().toLocaleString("en-PH", {
+      weekday: "long", year: "numeric", month: "long", day: "numeric",
+      hour: "2-digit", minute: "2-digit", second: "2-digit",
     });
-
-    if (!rows.length) { showToast('No records to download.', 'error'); return; }
-
-    doc.autoTable({
-        startY: 32,
-        head: [['Time-In', 'Full Name', 'ID Number', 'College', 'Program / Course', 'Type', 'Reason']],
-        body: rows,
-        styles: { fontSize: 8, cellPadding: 3, textColor: [30, 30, 30], lineColor: [200, 200, 200], lineWidth: 0.2 },
-        headStyles: { fillColor: [204, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
-        alternateRowStyles: { fillColor: [240, 245, 255] },
-        columnStyles: {
-            0: { cellWidth: 22 }, 1: { cellWidth: 45 }, 2: { cellWidth: 28 },
-            3: { cellWidth: 20 }, 4: { cellWidth: 80 }, 5: { cellWidth: 20 }, 6: { cellWidth: 32 }
-        },
-        margin: { left: 10, right: 10 }
-    });
-
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFontSize(7);
-        doc.setTextColor(150);
-        doc.text(
-            `Page ${i} of ${pageCount}  —  NEU Library Visitor Log  —  Confidential`,
-            148.5, doc.internal.pageSize.height - 5, { align: 'center' }
-        );
-    }
-
-    doc.save(`NEU_Library_Visitors_${dateVal}.pdf`);
-    showToast('PDF downloaded successfully! 📄');
+  }
+  tick();
+  setInterval(tick, 1000);
 }
 
-// ── Google Redirect Handler ────────────────────────────────────
-(async () => {
-    const { data: { session } } = await db.auth.getSession();
-    if (!session) return;
+// ============================================================
+//  PDF DOWNLOAD
+// ============================================================
+async function downloadPDF() {
+  const filterDate = document.getElementById("filter-date").value ||
+    new Date().toISOString().split("T")[0];
 
-    window.history.replaceState(null, '', window.location.pathname);
+  const { data, error } = await sb.from("visitor_logs")
+    .select("*")
+    .gte("time_in", `${filterDate}T00:00:00`)
+    .lte("time_in", `${filterDate}T23:59:59`)
+    .order("time_in", { ascending: true });
 
-    const email     = session.user.email;
-    const savedMode = localStorage.getItem('loginMode') || 'regular';
-    localStorage.removeItem('loginMode');
+  if (error) return toast("Error fetching records.", "error");
+  if (!data.length) return toast("No records to download.", "error");
 
-    if (savedMode === 'admin') {
-        const { data: adminRow } = await db.from('admin_users').select('email').eq('email', email).single();
-        if (!adminRow) {
-            showToast('You do not have admin privileges.', 'error');
-            await db.auth.signOut();
-            return;
-        }
-        enterAdmin();
-        return;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: "landscape" });
+
+  doc.setFontSize(14);
+  doc.text("NEU Library Visitor Log", 14, 15);
+  doc.setFontSize(10);
+  doc.text(`Date: ${filterDate}`, 14, 22);
+  doc.text(`Total Visitors: ${data.length}`, 14, 28);
+
+  doc.autoTable({
+    startY: 33,
+    head: [["Time-In", "Full Name", "ID Number", "College", "Program/Course", "Type", "Reason"]],
+    body: data.map(r => [
+      formatTime(r.time_in), r.full_name, r.id_number,
+      r.college, r.course, r.visitor_type, r.reason,
+    ]),
+    styles:     { fontSize: 8, cellPadding: 3 },
+    headStyles: { fillColor: [0, 51, 102] },
+    alternateRowStyles: { fillColor: [240, 240, 240] },
+  });
+
+  doc.save(`NEU_Library_Visitors_${filterDate}.pdf`);
+  toast("PDF downloaded! ✅");
+}
+
+// ============================================================
+//  UTILITIES
+// ============================================================
+function formatTime(iso) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleTimeString("en-PH",
+    { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
+function formatHour(h) {
+  const suffix = h < 12 ? "AM" : "PM";
+  const hour   = h % 12 || 12;
+  return `${hour}:00 ${suffix}`;
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+window.addEventListener("DOMContentLoaded", async () => {
+  // Set today's date as default filter
+  const today = new Date().toISOString().split("T")[0];
+  const filterDateEl = document.getElementById("filter-date");
+  if (filterDateEl) filterDateEl.value = today;
+
+  // Listen for auth state changes (handles OAuth redirect)
+  sb.auth.onAuthStateChange((_event, session) => {
+    if (session && !currentUser) {
+      const user  = session.user;
+      const admin = ADMIN_EMAILS.includes(user.email);
+      enterApp(user, admin);
     }
+  });
 
-    const meta = session.user.user_metadata;
-    const { data: existingProfile } = await db.from('user_profiles').select('*').eq('id', session.user.id).single();
-
-    if (!existingProfile) {
-        await db.from('user_profiles').insert([{
-            id:         session.user.id,
-            full_name:  meta.full_name || meta.name || email,
-            email:      email,
-            id_number:  '',
-            college:    '',
-            course:     ''
-        }]);
-    }
-
-    const profile = existingProfile || { full_name: meta.full_name || meta.name || email };
-    enterRegular(email, profile);
-})();
+  // Restore existing session
+  await restoreSession();
+});
